@@ -19,7 +19,7 @@ class Cart
 {
     use Macroable;
 
-    const DEFAULT_INSTANCE = 'default';
+    public const DEFAULT_INSTANCE = 'default';
 
     /**
      * Instance of the session manager.
@@ -72,9 +72,6 @@ class Cart
 
     /**
      * Cart constructor.
-     *
-     * @param \Illuminate\Session\SessionManager      $session
-     * @param \Illuminate\Contracts\Events\Dispatcher $events
      */
     public function __construct(SessionManager $session, Dispatcher $events)
     {
@@ -124,7 +121,6 @@ class Cart
      * @param int|float $qty
      * @param float     $price
      * @param float     $weight
-     * @param array     $options
      *
      * @return \Gloudemans\Shoppingcart\CartItem
      */
@@ -247,9 +243,15 @@ class Cart
      */
     public function remove($rowId)
     {
-        $cartItem = $this->get($rowId);
+        // $cartItem = $this->get($rowId);
 
         $content = $this->getContent();
+
+        if (!$content->has($rowId)) {
+            return false;
+        }
+
+        $cartItem = $content->get($rowId);
 
         $content->pull($cartItem->rowId);
 
@@ -508,11 +510,9 @@ class Cart
     /**
      * Search the cart content for a cart item matching the given search closure.
      *
-     * @param \Closure $search
-     *
      * @return \Illuminate\Support\Collection
      */
-    public function search(Closure $search)
+    public function search(\Closure $search)
     {
         return $this->getContent()->filter($search);
     }
@@ -651,8 +651,8 @@ class Cart
 
         $this->getConnection()->table($this->getTableName())->insert([
             'identifier' => $identifier,
-            'instance'   => $instance,
-            'content'    => $serializedContent,
+            'instance' => $instance,
+            'content' => $serializedContent,
             'created_at' => $this->createdAt ?: Carbon::now(),
             'updated_at' => Carbon::now(),
         ]);
@@ -680,7 +680,7 @@ class Cart
         }
 
         $stored = $this->getConnection()->table($this->getTableName())
-            ->where(['identifier'=> $identifier, 'instance' => $currentInstance])->first();
+            ->where(['identifier' => $identifier, 'instance' => $currentInstance])->first();
 
         if ($this->getConnection()->getDriverName() === 'pgsql') {
             $storedContent = unserialize(base64_decode(data_get($stored, 'content')));
@@ -749,7 +749,7 @@ class Cart
         }
 
         $stored = $this->getConnection()->table($this->getTableName())
-            ->where(['identifier'=> $identifier, 'instance'=> $instance])->first();
+            ->where(['identifier' => $identifier, 'instance' => $instance])->first();
 
         if ($this->getConnection()->getDriverName() === 'pgsql') {
             $storedContent = unserialize(base64_decode($stored->content));
@@ -809,7 +809,6 @@ class Cart
      * @param int|float $qty
      * @param float     $price
      * @param float     $weight
-     * @param array     $options
      *
      * @return \Gloudemans\Shoppingcart\CartItem
      */
@@ -849,13 +848,11 @@ class Cart
     }
 
     /**
-     * @param $identifier
-     *
      * @return bool
      */
     private function storedCartInstanceWithIdentifierExists($instance, $identifier)
     {
-        return $this->getConnection()->table($this->getTableName())->where(['identifier' => $identifier, 'instance'=> $instance])->exists();
+        return $this->getConnection()->table($this->getTableName())->where(['identifier' => $identifier, 'instance' => $instance])->exists();
     }
 
     /**
@@ -892,11 +889,6 @@ class Cart
 
     /**
      * Get the Formatted number.
-     *
-     * @param $value
-     * @param $decimals
-     * @param $decimalPoint
-     * @param $thousandSeperator
      *
      * @return string
      */
